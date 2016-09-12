@@ -59,6 +59,7 @@ void UGrabber::Grab()
 }
 void UGrabber::Release()
 {
+	if (!PhysicsHandle) { return; }
 	UE_LOG(LogTemp, Warning, TEXT("Grab Released"))
 		//TODO Release Physics
 		PhysicsHandle->ReleaseComponent();
@@ -71,6 +72,7 @@ void UGrabber::TickComponent( float DeltaTime, ELevelTick TickType, FActorCompon
 
 	GetReachLineEnd();
 
+	if (!PhysicsHandle) { return; }
 	//If the physics handle is attached 
 	if (PhysicsHandle->GrabbedComponent)
 	{
