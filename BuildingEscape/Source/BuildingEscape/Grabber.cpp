@@ -14,8 +14,6 @@ UGrabber::UGrabber()
 
 	// ...
 }
-
-
 // Called when the game starts
 void UGrabber::BeginPlay()
 {
@@ -29,10 +27,7 @@ void UGrabber::SetUpAttachedInputComponent()
 	InputComponent = GetOwner()->FindComponentByClass<UInputComponent>();
 	if (InputComponent)
 	{
-		//Input Handle found
-		UE_LOG(LogTemp, Warning, TEXT("Input component found."))
-			//Bind input axis
-			InputComponent->BindAction("Grab", IE_Pressed, this, &UGrabber::Grab);
+		InputComponent->BindAction("Grab", IE_Pressed, this, &UGrabber::Grab);
 		InputComponent->BindAction("Grab", IE_Released, this, &UGrabber::Release);
 	}
 	else
@@ -45,11 +40,7 @@ void UGrabber::FindPhysicsHandleComponent()
 {
 	///Look for attached physics handle
 	PhysicsHandle = GetOwner()->FindComponentByClass<UPhysicsHandleComponent>();
-	if (PhysicsHandle)
-	{
-		//Physics handle found
-	}
-	else
+	if (PhysicsHandle==nullptr)
 	{
 		UE_LOG(LogTemp, Error, TEXT("%s missing physics handle component."), *GetOwner()->GetName());
 	}
@@ -78,28 +69,43 @@ void UGrabber::TickComponent( float DeltaTime, ELevelTick TickType, FActorCompon
 {
 	Super::TickComponent( DeltaTime, TickType, ThisTickFunction );
 
-	//Get player view point
-	FVector playerViewPointLocation;
-	FRotator playerViewPointRotation;
-	GetWorld()->GetFirstPlayerController()->GetPlayerViewPoint(
-		OUT playerViewPointLocation,
-		OUT playerViewPointRotation
-	);
-	//TODO Log Out to test
-	/*UE_LOG(LogTemp, Warning, TEXT("Location: %s Rotation: %s"), *playerViewPointLocation.ToString(), *playerViewPointRotation.ToString());*/
-
-	FVector LineTraceEnd = playerViewPointLocation + playerViewPointRotation.Vector()*Reach;
+	GetReachLineEnd();
 
 	//If the physics handle is attached 
 	if (PhysicsHandle->GrabbedComponent)
 	{
 		//move the object that we are holding
-		PhysicsHandle->SetTargetLocation(LineTraceEnd);
+		PhysicsHandle->SetTargetLocation(GetReachLineEnd());
 	}
 	
 
 }
 const FHitResult UGrabber::GetFirstPhysicsBodyInReach()
+{
+	//Draw a red trace line
+	//DrawDebugLine(GetWorld(), playerViewPointLocation, LineTraceEnd, FColor(255, 0, 0), false, 0.0f, 0.0f, 10.0f);
+
+	///Line-cast out to reach distance
+	FHitResult HitResult;
+	FCollisionQueryParams TraceParameters(FName(TEXT(" ")), false, GetOwner());
+	GetWorld()->LineTraceSingleByObjectType(
+		OUT HitResult,
+		GetReachLineStart(),
+		GetReachLineEnd(),
+		FCollisionObjectQueryParams(ECollisionChannel::ECC_PhysicsBody),
+		TraceParameters
+	);
+
+	//See what we hit
+	AActor* hitActor = HitResult.GetActor();
+	if (hitActor)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("Line Trace Hit :%s"), *hitActor->GetName());
+	}
+	return HitResult;
+}
+
+FVector UGrabber::GetReachLineEnd()
 {
 	//Get player view point
 	FVector playerViewPointLocation;
@@ -111,28 +117,19 @@ const FHitResult UGrabber::GetFirstPhysicsBodyInReach()
 	//TODO Log Out to test
 	/*UE_LOG(LogTemp, Warning, TEXT("Location: %s Rotation: %s"), *playerViewPointLocation.ToString(), *playerViewPointRotation.ToString());*/
 
-	FVector LineTraceEnd = playerViewPointLocation + playerViewPointRotation.Vector()*Reach;
-
-	///Draw a red trace line
-	//DrawDebugLine(GetWorld(), playerViewPointLocation, LineTraceEnd, FColor(255, 0, 0), false, 0.0f, 0.0f, 10.0f);
-
-	///Line-cast out to reach distance
-	FHitResult Hit;
-	FCollisionQueryParams TraceParameters(FName(TEXT(" ")), false, GetOwner());
-	GetWorld()->LineTraceSingleByObjectType(
-		OUT Hit,
-		playerViewPointLocation,
-		LineTraceEnd,
-		FCollisionObjectQueryParams(ECollisionChannel::ECC_PhysicsBody),
-		TraceParameters
-	);
-
-	//See what we hit
-	AActor* hitActor = Hit.GetActor();
-	if (hitActor)
-	{
-		UE_LOG(LogTemp, Warning, TEXT("Line Trace Hit :%s"), *hitActor->GetName());
-	}
-	return Hit;
+	return playerViewPointLocation + playerViewPointRotation.Vector()*Reach;
 }
+FVector UGrabber::GetReachLineStart()
+{
+	//Get player view point
+	FVector playerViewPointLocation;
+	FRotator playerViewPointRotation;
+	GetWorld()->GetFirstPlayerController()->GetPlayerViewPoint(
+		OUT playerViewPointLocation,
+		OUT playerViewPointRotation
+	);
+	//TODO Log Out to test
+	/*UE_LOG(LogTemp, Warning, TEXT("Location: %s Rotation: %s"), *playerViewPointLocation.ToString(), *playerViewPointRotation.ToString());*/
 
+	return playerViewPointLocation;
+}
