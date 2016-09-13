@@ -27,35 +27,21 @@ void UOpenDoor::BeginPlay()
 		UE_LOG(LogTemp, Error, TEXT("%s missing Pressure Plate."), *GetOwner()->GetName());
 	}
 }
-
-void UOpenDoor::OpenDoor()
-{
-	//Set door rotation
-	//Owner->SetActorRotation(FRotator(0.0f, OpenAngle, 0.0f));
-	OnOpenRequest.Broadcast();
-}
-
-void UOpenDoor::CloseDoor()
-{
-	//Set door rotation
-	Owner->SetActorRotation(FRotator(0.0f, 0.0f, 0.0f));
-}
-
+	
 // Called every frame
 void UOpenDoor::TickComponent( float DeltaTime, ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction )
 {
 	Super::TickComponent( DeltaTime, TickType, ThisTickFunction );
 
 	//Pool the trigger volume every frame
-	if (GetTotalMassOfActorsOnPlate() > 30.0f)//TODO make into parameter
+	if (GetTotalMassOfActorsOnPlate() > TriggerMass)//TODO make into parameter
 	{
-		OpenDoor();
-		LastDoorOpenTime = GetWorld()->GetTimeSeconds();
+		OnOpenRequest.Broadcast();
 	}
 	//Check if its time to close the door
-	if (GetWorld()->GetTimeSeconds() - LastDoorOpenTime > DoorCloseDelay)
+	else
 	{
-		CloseDoor();
+		OnCloseRequest.Broadcast();
 	}
 }
 float UOpenDoor::GetTotalMassOfActorsOnPlate()
